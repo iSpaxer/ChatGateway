@@ -15,3 +15,9 @@ services:
     tty: true
     stdin_open: true
     command: /usr/sbin/sshd -D
+
+
+networks:
+  default:
+    driver: bridge
+    name: docker_free

@@ -23,10 +23,10 @@ if(NOT UV_LIBRARY)
 endif()
 
 # Добавление исполняемого файла
-add_executable(test_websocket main.cpp)
+add_executable(ChatGateway main.cpp)
 
 # Линковка библиотек
-target_link_libraries(test_websocket
+target_link_libraries(ChatGateway
     ${USOCKETS_LIBRARY}
     ${UV_LIBRARY}
     OpenSSL::SSL

@@ -3,6 +3,7 @@
 
 int main()
 {
+    std::cout << "Запуск веб сервера..." << std::endl;
     uWS::App()
         .ws<int>("/*",
                  {// Используем int вместо void для UserData

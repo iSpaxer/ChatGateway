@@ -14,6 +14,7 @@ RUN apt-get update && apt-get install -y \
     libssl-dev \
     zlib1g-dev \
     openssh-server \
+    lsof \
     && rm -rf /var/lib/apt/lists/*
 
 # Настройка SSH
