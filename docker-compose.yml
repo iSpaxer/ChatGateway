@@ -1,23 +1,17 @@
-version: '3.9'
+version: '3.8'
+
 services:
-
   chat-gateway:
-    container_name: chat-gateway-2
-    build: .
-    image: chat-gateway-image-2
-    security_opt:
-      - seccomp:unconfined
-    cap_add:
-      - SYS_PTRACE
+    build:
+      context: .
+      dockerfile: Dockerfile
     ports:
-      - "127.0.0.1:2222:22"
+      - "9001:9001"  # Порт для WebSocket-сервера
+      - "2222:22"    # Порт для SSH (локальный 2222 мапится на 22 в контейнере)
     volumes:
-      - .:/project
+      - .:/app  # Монтирование текущей директории в /app
     environment:
-      - TZ=UTC
-    restart: unless-stopped
-
-networks:
-  default:
-    driver: bridge
-    name: docker_free
+      - DEBIAN_FRONTEND=noninteractive
+    tty: true
+    stdin_open: true
+    command: /usr/sbin/sshd -D
