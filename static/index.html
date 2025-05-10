@@ -14,7 +14,7 @@
         <pre id="messages"></pre>
     </div>
     <script>
-        const ws = new WebSocket("ws://localhost:9001");
+        const ws = new WebSocket("ws://localhost:8080/ws/alexandr");
         const messages = document.getElementById("messages");
 
         ws.onopen = () => {

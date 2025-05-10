@@ -13,6 +13,7 @@ find_library(USOCKETS_LIBRARY NAMES uSockets)
 find_library(UV_LIBRARY NAMES uv)
 find_package(OpenSSL REQUIRED)
 find_package(ZLIB REQUIRED)
+find_package(nlohmann_json REQUIRED)
 
 # Проверка, найдены ли библиотеки
 if(NOT USOCKETS_LIBRARY)
@@ -23,7 +24,13 @@ if(NOT UV_LIBRARY)
 endif()
 
 # Добавление исполняемого файла
-add_executable(ChatGateway main.cpp)
+add_executable(ChatGateway main.cpp
+        util/logger/AsynsLogger.cpp
+        util/logger/AsynsLogger.h
+        dto/ActiveUser.cpp
+        dto/ActiveUser.h
+        controllers/ChatController.cpp
+        controllers/ChatController.h)
 
 # Линковка библиотек
 target_link_libraries(ChatGateway
@@ -32,4 +39,11 @@ target_link_libraries(ChatGateway
     OpenSSL::SSL
     OpenSSL::Crypto
     ZLIB::ZLIB
+    nlohmann_json::nlohmann_json
+)
+
+target_include_directories(ChatGateway PRIVATE
+        ${CMAKE_SOURCE_DIR} # <--- вот это ключевое
+        /usr/local/include
+        /usr/local/include/uWebSockets
 )
