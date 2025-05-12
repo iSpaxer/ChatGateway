@@ -6,15 +6,18 @@
 #define ACTRIVEUSER_H
 #include <chrono>
 
+#include "jwt/JwtToken.h"
+
 // todo конструктор без аргументов?
 class ActiveUser {
 public:
     constexpr ActiveUser() = default;
-    explicit ActiveUser(const std::string &username, const std::string &ownerRoom)
-        : username(username), topic(ownerRoom), loggedIn(std::chrono::system_clock::now()) {
+
+    explicit ActiveUser(JwtToken jwtToken,  const std::string &ownerRoom)
+        : jwtToken(std::move(jwtToken)), topic(ownerRoom), loggedIn(std::chrono::system_clock::now()) {
     }
 
-    std::string username;
+    JwtToken jwtToken;
     std::string topic;
     std::chrono::system_clock::time_point loggedIn;
     std::chrono::system_clock::time_point loggedOut;

@@ -3,7 +3,8 @@
 #include <nlohmann/json.hpp>
 
 #include "controllers/ChatController.h"
-#include "util/logger/AsynsLogger.h"
+#include "jwt/config/JwtConfigure.h"
+#include "util/logger/AsynsLogger.h"\
 
 using json = nlohmann::json;
 
@@ -19,7 +20,18 @@ int main() {
         }
     });
 
-    ChatController chatController(uWS);
+    // ----------------
+    //  Utils
+    // ----------------
+    JwtConfigure jwtConfig;
+
+    // ----------------
+    //  Controllers
+    // ----------------
+    ChatController chatController(uWS, jwtConfig);
+
+
+
     uWS.run();
 
     logger << "Failed to listen on port 8080" << std::endl;
