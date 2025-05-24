@@ -5,6 +5,9 @@ FROM ubuntu:24.04
 ENV DEBIAN_FRONTEND=noninteractive
 
 # Установка зависимостей для компиляции и SSH
+# todo установить nlohman и jwt cpp
+# git clone https://github.com/Thalhammer/jwt-cpp.git
+# cp -r jwt-cpp/include/jwt-cpp /usr/local/include/
 RUN apt-get update && apt-get install -y \
     build-essential \
     g++ \

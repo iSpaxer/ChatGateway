@@ -7,18 +7,17 @@
 #include <App.h>
 #include <nlohmann/json.hpp>
 
+#include "jwt/config/JwtConfigure.h"
+
 using json = nlohmann::json;
 
 class ChatController {
 public:
-    explicit ChatController(uWS::App& _uWS);
-
-    void createChat(uWS::HttpResponse<false> *res, uWS::HttpRequest *req);
+    explicit ChatController(uWS::App& _uWS, JwtConfigure& _jwtConfigure);
 
 private:
-    std::string generateUUID();
-
     uWS::App& uWS;
+    JwtConfigure& jwtConfigure;
     std::unordered_map<std::string, long> onlineByTopic;
     std::set<std::string> topics;
 };
