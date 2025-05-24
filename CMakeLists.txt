@@ -18,7 +18,7 @@ if(NOT USOCKETS_LIBRARY)
     message(FATAL_ERROR "uSockets library not found. Please install libuSockets in /usr/local/lib")
 endif()
 if(NOT UV_LIBRARY)
-    message(FATAL_ERROR "libuv library not found. Please install libuv1-dev")
+    message(FATAL_ERROR "libuv library not found. Please install libuv1-dev") # todo может удалть?
 endif()
 
 # --------------------
@@ -42,6 +42,31 @@ FetchContent_Declare(
         GIT_TAG        v0.6.0
 )
 FetchContent_MakeAvailable(jwt-cpp)
+
+# --------------------
+# Fetch AMQP-CPP
+# --------------------
+FetchContent_Declare(
+        amqpcpp
+        GIT_REPOSITORY https://github.com/CopernicaMarketingSoftware/AMQP-CPP.git
+        GIT_TAG master
+)
+
+# Включаем TCP поддержку перед сборкой AMQP-CPP
+set(AMQP-CPP_LINUX_TCP ON CACHE BOOL "" FORCE)
+
+FetchContent_MakeAvailable(amqpcpp)
+
+# --------------------
+# Fetch libuv
+# --------------------
+FetchContent_Declare(
+        libuv
+        GIT_REPOSITORY https://github.com/libuv/libuv.git
+        GIT_TAG v1.44.2
+)
+
+FetchContent_MakeAvailable(libuv)
 
 # --------------------
 # Executable
@@ -69,8 +94,13 @@ target_link_libraries(ChatGateway PRIVATE
         ZLIB::ZLIB
         nlohmann_json::nlohmann_json
         jwt-cpp::jwt-cpp
+        amqpcpp
+        uv_a
+        ssl crypto pthread dl rt
 )
 
 target_include_directories(ChatGateway PRIVATE
-        ${CMAKE_SOURCE_DIR} #
+        ${CMAKE_SOURCE_DIR}
+        ${amqpcpp_SOURCE_DIR}/include
+        ${libuv_SOURCE_DIR}/include
 )
