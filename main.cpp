@@ -1,4 +1,63 @@
 #include <uWebSockets/App.h>
+
+#include <uWebSockets/App.h>
+#include <amqpcpp.h>
+#include <amqpcpp/libuv.h>
+#include <uv.h>
+
+#include "dto/ActiveUser.h"
+
+
+int main() {
+    // Объявляем очередь (на случай, если её ещё нет)
+    //     // Объявляем очередьnt main() {
+    // 1. Берём стандартный uv_loop_t
+    uv_loop_t *uvLoop = uv_default_loop();
+
+    // 2. Создаём us_loop_t поверх uv_loop_t
+    //    Второй, третий и четвёртый параметры (wakeup_cb, pre_cb, post_cb) можно передать nullptr,
+    //    ext_size оставляем 0, если не нужен дополнительный экстеншн.
+    struct us_loop_t *usLoop = us_create_loop(
+        /* hint */ (void *) uvLoop,
+                   /* wakeup_cb */ nullptr,
+                   /* pre_cb */ nullptr,
+                   /* post_cb */ nullptr,
+                   /* ext_size */ 0
+    );
+
+    // 3. Получаем C++ обёртку uWS::Loop
+    uWS::Loop *uwsLoop = uWS::Loop::get(usLoop);
+
+    // AMQP-CPP setup
+    AMQP::LibUvHandler handler(uvLoop);
+    AMQP::TcpConnection connection(&handler, AMQP::Address("amqp://guest:guest@localhost/"));
+    AMQP::TcpChannel channel(&connection);
+
+
+    // uWS setup
+    uWS::App()
+            .ws<ActiveUser>("/*", {
+                                .message = [&](auto *ws, std::string_view message, uWS::OpCode opCode) {
+                                    channel.declareQueue("my_queue").onSuccess([](const std::string& name, uint32_t messageCount, uint32_t consumerCount) {
+                                        std::cout << "Queue declared: " << name << "\n"
+                                                << "Messages: " << messageCount << "\n"
+                                                << "Consumers: " << consumerCount << std::endl;
+                                    });
+                                    channel.publish("", "my_queue", message);
+                                    ws->send("broadcastMessage", opCode);
+                                }
+                            })
+        .listen(9001, [](auto *token) {
+            if (token) {
+                std::cout << "Server is listening on port 9001\n";
+            }
+        });
+    channel.publish("", "my_queue", "Hello, RabbitMQ!");
+
+    uv_run(uvLoop, UV_RUN_DEFAULT);
+
+}
+
 // #include <chrono>
 // #include <nlohmann/json.hpp>
 //
@@ -39,38 +98,6 @@
 //         logger << "AMQP connected" << std::endl;
 //     }
 // };
-
-#include <amqpcpp.h>
-#include <amqpcpp/libuv.h>
-#include <uv.h>
-
-#include "dto/ActiveUser.h"
-
-
-int main() {
-    uv_loop_t *loop = uv_default_loop();
-
-    // AMQP-CPP setup
-    AMQP::LibUvHandler handler(loop);
-    AMQP::TcpConnection connection(&handler, AMQP::Address("amqp://guest:guest@localhost/"));
-    AMQP::TcpChannel channel(&connection);
-
-    // uWS setup
-    uWS::App()
-        .ws<ActiveUser>("/*", {
-            .message = [&](auto *ws, std::string_view message, uWS::OpCode opCode) {
-                channel.publish("", "my_queue", message);
-            }
-        })
-        .listen(9001, [](auto *token) {
-            if (token) {
-                std::cout << "Server is listening on port 9001\n";
-            }
-        });
-
-    uv_run(loop, UV_RUN_DEFAULT);
-}
-
 //
 // // Класс ChatController
 // class ChatController {
