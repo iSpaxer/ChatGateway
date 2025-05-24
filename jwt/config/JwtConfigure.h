@@ -4,20 +4,15 @@
 
 #ifndef JWTCONFIGURE_H
 #define JWTCONFIGURE_H
-#include <stdexcept>
 #include <string>
 #include <jwt-cpp/jwt.h>
 
 
 class JwtConfigure {
 public:
-    explicit JwtConfigure() {
-       secret = base64UrlDecode(keyB64url);
-    }
+    explicit JwtConfigure();
 
-    [[nodiscard]] std::string getSecret() const {
-        return secret;
-    }
+    [[nodiscard]] std::string getSecret() const;
 
 private:
     std::string base64UrlDecode(const std::string& input);

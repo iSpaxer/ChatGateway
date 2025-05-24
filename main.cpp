@@ -11,7 +11,7 @@ using json = nlohmann::json;
 AsyncLogger logger;
 
 int main() {
-    std::cout << "Запуск веб сервера 2..." << std::endl;
+    std::cout << "Запуск ChatGateway сервера..." << std::endl;
     auto uWS = uWS::App().get("/api/*", [](auto *res, auto */*req*/) {
         res->end("Hello world from Http!");
     }).listen(8080, [](const auto *listen_socket) {
@@ -29,7 +29,6 @@ int main() {
     //  Controllers
     // ----------------
     ChatController chatController(uWS, jwtConfig);
-
 
 
     uWS.run();

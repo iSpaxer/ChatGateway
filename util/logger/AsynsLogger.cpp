@@ -4,6 +4,8 @@
 
 #include "AsynsLogger.h"
 
+#include <iomanip>
+
 AsyncLogger::AsyncLogger() {
     // Запускаем поток логирования
     logThread = std::thread([this] {
@@ -16,8 +18,16 @@ AsyncLogger::AsyncLogger() {
                 message = std::move(logQueue.front());
                 logQueue.pop();
             }
+            // Получаем текущее системное время
+            auto now = std::chrono::system_clock::now();
+
+            // Преобразуем в time_t (время в секундах с эпохи)
+            std::time_t now_time_t = std::chrono::system_clock::to_time_t(now);
+
+            // Преобразуем в структуру tm в локальном времени
+            std::tm* local_tm = std::localtime(&now_time_t);
             // Выводим сообщение
-            std::cout << "[" << std::this_thread::get_id() << "] " << message << std::endl;
+            std::cout << "[" << std::put_time(local_tm, "%Y-%m-%d %H:%M:%S")  << "] " << message << std::endl;
         }
     });
 }

@@ -15,11 +15,7 @@ class ChatController {
 public:
     explicit ChatController(uWS::App& _uWS, JwtConfigure& _jwtConfigure);
 
-    void createChat(uWS::HttpResponse<false> *res, uWS::HttpRequest *req);
-
 private:
-    std::string generateUUID();
-
     uWS::App& uWS;
     JwtConfigure& jwtConfigure;
     std::unordered_map<std::string, long> onlineByTopic;
