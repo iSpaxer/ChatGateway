@@ -1,64 +1,33 @@
 #include <uWebSockets/App.h>
 
-#include <uWebSockets/App.h>
-#include <amqpcpp.h>
-#include <amqpcpp/libuv.h>
-#include <uv.h>
-
-#include "dto/ActiveUser.h"
-
-
-int main() {
-    // Объявляем очередь (на случай, если её ещё нет)
-    //     // Объявляем очередьnt main() {
-    // 1. Берём стандартный uv_loop_t
-    uv_loop_t *uvLoop = uv_default_loop();
-
-    // 2. Создаём us_loop_t поверх uv_loop_t
-    //    Второй, третий и четвёртый параметры (wakeup_cb, pre_cb, post_cb) можно передать nullptr,
-    //    ext_size оставляем 0, если не нужен дополнительный экстеншн.
-    struct us_loop_t *usLoop = us_create_loop(
-        /* hint */ (void *) uvLoop,
-                   /* wakeup_cb */ nullptr,
-                   /* pre_cb */ nullptr,
-                   /* post_cb */ nullptr,
-                   /* ext_size */ 0
-    );
-
-    // 3. Получаем C++ обёртку uWS::Loop
-    uWS::Loop *uwsLoop = uWS::Loop::get(usLoop);
-
-    // AMQP-CPP setup
-    AMQP::LibUvHandler handler(uvLoop);
-    AMQP::TcpConnection connection(&handler, AMQP::Address("amqp://guest:guest@localhost/"));
-    AMQP::TcpChannel channel(&connection);
-
-
-    // uWS setup
-    uWS::App()
-            .ws<ActiveUser>("/*", {
-                                .message = [&](auto *ws, std::string_view message, uWS::OpCode opCode) {
-                                    channel.declareQueue("my_queue").onSuccess([](const std::string& name, uint32_t messageCount, uint32_t consumerCount) {
-                                        std::cout << "Queue declared: " << name << "\n"
-                                                << "Messages: " << messageCount << "\n"
-                                                << "Consumers: " << consumerCount << std::endl;
-                                    });
-                                    channel.publish("", "my_queue", message);
-                                    ws->send("broadcastMessage", opCode);
-                                }
-                            })
-        .listen(9001, [](auto *token) {
-            if (token) {
-                std::cout << "Server is listening on port 9001\n";
-            }
-        });
-    channel.publish("", "my_queue", "Hello, RabbitMQ!");
-
-    uv_run(uvLoop, UV_RUN_DEFAULT);
-
-}
-
-// #include <chrono>
+// #include <uWebSockets/App.h>
+// #include <amqpcpp.h>
+// #include <amqpcpp/libuv.h>
+// #include <uv.h>
+//
+// #include "dto/ActiveUser.h"
+//
+// #include <amqpcpp.h>
+// #include <amqpcpp/libuv.h>
+// #include <iostream>
+// #include <memory>
+//
+// #include "dto/ActiveUser.h"
+//
+// // Логгер
+// #include <amqpcpp.h>               // AMQP-CPP
+// #include <amqpcpp/libuv.h>         // AMQP-CPP handler для libuv
+// #include <uv.h>                    // libuv
+// #include <iostream>
+// #include <string>
+//
+// #include <uv.h>
+// #include <amqpcpp.h>
+// #include <amqpcpp/libuv.h>
+// #include <iostream>
+// #include <string>
+//
+//
 // #include <nlohmann/json.hpp>
 //
 // // #include "controllers/ChatController.h"
@@ -67,7 +36,7 @@ int main() {
 //
 // #include <amqpcpp.h>
 // #include <amqpcpp/libuv.h>
-// #include <uv.h>
+#include <uv.h>
 //
 // #include "dto/ActiveUser.h"
 //
@@ -80,6 +49,62 @@ int main() {
 // #include <amqpcpp/libuv.h>
 // #include <iostream>
 // #include <string>
+
+// Структура для пользовательских данных WebSocket
+struct PerSocketData {
+    /* Пустая структура, можно добавить свои данные */
+};
+
+// Определяем структуру, соответствующую внутренней структуре us_loop_t
+struct us_loop_t {
+    char data[104];        // Буфер для выравнивания, размер зависит от версии uSockets
+    uv_loop_t* uv_loop;    // Указатель на uv_loop_t
+    int is_default;        // Флаг, указывающий, является ли цикл стандартным
+    void* uv_pre;          // Дополнительные указатели для libuv
+    void* uv_check;
+};
+
+int main() {
+    // Создаем приложение uWebSockets
+    uWS::App app;
+
+    // Получаем указатель на цикл событий (uv_loop_t)
+    uWS::Loop* loop = uWS::Loop::get();
+    uv_loop_t* uv_loop = reinterpret_cast<us_loop_t *>(loop)->uv_loop;
+
+    // Выводим адрес указателя для демонстрации
+    std::cout << "uv_loop_t pointer: " << uv_loop << std::endl;
+
+    // Настраиваем WebSocket-поведение
+    app.ws<PerSocketData>("/*", {
+        .open = [](auto* ws) {
+            std::cout << "New WebSocket connection opened" << std::endl;
+        },
+        .message = [](auto* ws, std::string_view message, uWS::OpCode opCode) {
+            std::cout << "Received message: " << message << std::endl;
+            ws->send(message, opCode); // Эхо-ответ
+        },
+        .close = [](auto* ws, int code, std::string_view message) {
+            std::cout << "WebSocket closed: " << code << ", message: " << message << std::endl;
+        }
+    });
+
+    // Запускаем приложение на порту 3000
+    app.listen(3000, [](auto* listen_socket) {
+        if (listen_socket) {
+            std::cout << "Listening on port 3000" << std::endl;
+        } else {
+            std::cout << "Failed to listen on port 3000" << std::endl;
+        }
+    });
+
+    // Запускаем цикл событий через run()
+    app.run();
+
+    std::cout << "Application has stopped" << std::endl;
+
+    return 0;
+}
 //
 // // Логгер (замените на ваш вариант)
 // #define logger std::cout
@@ -162,6 +187,7 @@ int main() {
 //
 //     // Настройка uWebSockets
 //     uWS::App app;
+//     app.getLoop();
 //
 //     app.get("/api/*", [](auto *res, auto */*req*/) {
 //         res->end("Hello world from Http!");

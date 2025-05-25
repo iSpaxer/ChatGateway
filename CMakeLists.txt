@@ -8,17 +8,16 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # Dependencies
 # --------------------
 find_library(USOCKETS_LIBRARY NAMES uSockets PATHS /usr/local/lib)
-find_library(UV_LIBRARY     NAMES uv       PATHS /usr/local/lib)
+find_library(UV_LIBRARY NAMES uv PATHS /usr/local/lib)
 find_package(OpenSSL REQUIRED)
-find_package(ZLIB    REQUIRED)
-
+find_package(ZLIB REQUIRED)
 
 # Проверка зависимостей
 if(NOT USOCKETS_LIBRARY)
     message(FATAL_ERROR "uSockets library not found. Please install libuSockets in /usr/local/lib")
 endif()
 if(NOT UV_LIBRARY)
-    message(FATAL_ERROR "libuv library not found. Please install libuv1-dev") # todo может удалть?
+    message(FATAL_ERROR "libuv library not found. Please install libuv1-dev")
 endif()
 
 # --------------------
@@ -35,11 +34,10 @@ FetchContent_MakeAvailable(nlohmann_json)
 # --------------------
 # Fetch jwt-cpp
 # --------------------
-include(FetchContent)
 FetchContent_Declare(
         jwt-cpp
         GIT_REPOSITORY https://github.com/Thalhammer/jwt-cpp.git
-        GIT_TAG        v0.6.0
+        GIT_TAG v0.6.0
 )
 FetchContent_MakeAvailable(jwt-cpp)
 
@@ -51,22 +49,8 @@ FetchContent_Declare(
         GIT_REPOSITORY https://github.com/CopernicaMarketingSoftware/AMQP-CPP.git
         GIT_TAG master
 )
-
-# Включаем TCP поддержку перед сборкой AMQP-CPP
 set(AMQP-CPP_LINUX_TCP ON CACHE BOOL "" FORCE)
-
 FetchContent_MakeAvailable(amqpcpp)
-
-# --------------------
-# Fetch libuv
-# --------------------
-FetchContent_Declare(
-        libuv
-        GIT_REPOSITORY https://github.com/libuv/libuv.git
-        GIT_TAG v1.44.2
-)
-
-FetchContent_MakeAvailable(libuv)
 
 # --------------------
 # Executable
@@ -83,9 +67,6 @@ add_executable(ChatGateway
 # --------------------
 # Link libraries
 # --------------------
-# Note: jwt-cpp::jwt-cpp and nlohmann_json::nlohmann_json automatically bring include dirs
-# No manual include_directories needed for these
-
 target_link_libraries(ChatGateway PRIVATE
         ${USOCKETS_LIBRARY}
         ${UV_LIBRARY}
@@ -95,12 +76,13 @@ target_link_libraries(ChatGateway PRIVATE
         nlohmann_json::nlohmann_json
         jwt-cpp::jwt-cpp
         amqpcpp
-        uv_a
-        ssl crypto pthread dl rt
 )
 
+# --------------------
+# Include directories
+# --------------------
 target_include_directories(ChatGateway PRIVATE
         ${CMAKE_SOURCE_DIR}
         ${amqpcpp_SOURCE_DIR}/include
-        ${libuv_SOURCE_DIR}/include
+        /usr/local/include # Для uWebSockets
 )
