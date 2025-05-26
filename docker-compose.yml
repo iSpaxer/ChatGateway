@@ -1,23 +1,33 @@
 version: '3.8'
 
 services:
-  chat-gateway:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    ports:
-      - "9001:9001"  # Порт для WebSocket-сервера
-      - "2222:22"    # Порт для SSH (локальный 2222 мапится на 22 в контейнере)
-    volumes:
-      - .:/app  # Монтирование текущей директории в /app
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.3.0
+    container_name: zookeeper
     environment:
-      - DEBIAN_FRONTEND=noninteractive
-    tty: true
-    stdin_open: true
-    command: /usr/sbin/sshd -D
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    networks:
+      - docker_free
+    restart: unless-stopped
 
+  kafka:
+    image: confluentinc/cp-kafka:7.3.0
+    container_name: kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+    networks:
+      - docker_free
+    restart: unless-stopped
 
 networks:
-  default:
+  docker_free:
     driver: bridge
-    name: docker_free

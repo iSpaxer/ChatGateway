@@ -12,12 +12,14 @@ find_library(UV_LIBRARY NAMES uv PATHS /usr/local/lib)
 find_package(OpenSSL REQUIRED)
 find_package(ZLIB REQUIRED)
 
-# Проверка зависимостей
-if(NOT USOCKETS_LIBRARY)
-    message(FATAL_ERROR "uSockets library not found. Please install libuSockets in /usr/local/lib")
-endif()
-if(NOT UV_LIBRARY)
-    message(FATAL_ERROR "libuv library not found. Please install libuv1-dev")
+# Manually find librdkafka
+find_library(RDKAFKA_LIBRARY NAMES rdkafka PATHS /usr/lib/x86_64-linux-gnu)
+find_library(RDKAFKAXX_LIBRARY NAMES rdkafka++ PATHS /usr/lib/x86_64-linux-gnu)
+find_path(RDKAFKA_INCLUDE_DIR NAMES rdkafkacpp.h PATHS /usr/include/librdkafka)
+
+# Check if librdkafka was found
+if(NOT RDKAFKA_LIBRARY OR NOT RDKAFKAXX_LIBRARY OR NOT RDKAFKA_INCLUDE_DIR)
+    message(FATAL_ERROR "librdkafka not found. Please install librdkafka-dev")
 endif()
 
 # --------------------
@@ -42,17 +44,6 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(jwt-cpp)
 
 # --------------------
-# Fetch AMQP-CPP
-# --------------------
-FetchContent_Declare(
-        amqpcpp
-        GIT_REPOSITORY https://github.com/CopernicaMarketingSoftware/AMQP-CPP.git
-        GIT_TAG master
-)
-set(AMQP-CPP_LINUX_TCP ON CACHE BOOL "" FORCE)
-FetchContent_MakeAvailable(amqpcpp)
-
-# --------------------
 # Executable
 # --------------------
 add_executable(ChatGateway
@@ -73,9 +64,11 @@ target_link_libraries(ChatGateway PRIVATE
         OpenSSL::SSL
         OpenSSL::Crypto
         ZLIB::ZLIB
+        ${RDKAFKA_LIBRARY}
+        ${RDKAFKAXX_LIBRARY}
         nlohmann_json::nlohmann_json
         jwt-cpp::jwt-cpp
-        amqpcpp
+        dl
 )
 
 # --------------------
@@ -83,6 +76,6 @@ target_link_libraries(ChatGateway PRIVATE
 # --------------------
 target_include_directories(ChatGateway PRIVATE
         ${CMAKE_SOURCE_DIR}
-        ${amqpcpp_SOURCE_DIR}/include
-        /usr/local/include # Для uWebSockets
+        /usr/local/include  # For uWebSockets
+        ${RDKAFKA_INCLUDE_DIR}  # For librdkafka
 )
