@@ -4,7 +4,7 @@
 
 #ifndef CHATCONTROLLER_H
 #define CHATCONTROLLER_H
-#include <App.h>
+#include <uWebSockets/App.h>
 #include <nlohmann/json.hpp>
 
 #include "jwt/config/JwtConfigure.h"

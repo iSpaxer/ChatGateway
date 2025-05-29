@@ -6,14 +6,18 @@
 #include <memory>
 
 #include "dto/ActiveUser.h"
+#include "util/SimpleEnv.h"
 
-int main() {
+int main(int argc, char* argv[]) {
     // Define WebSocket type and connections set
+
+    SimpleEnv env(argc > 1 && std::string(argv[1]) == "prod" ? "/app/prod.env" : "dev.env");
 
     // Set up Kafka producer
     std::string errstr;
+    std::cout << env.get("KAFKA_HOST") + ":" + env.get("KAFKA_PORT") << std::endl;
     std::unique_ptr<RdKafka::Conf> conf(RdKafka::Conf::create(RdKafka::Conf::CONF_GLOBAL));
-    conf->set("bootstrap.servers", "localhost:9092", errstr);
+    conf->set("bootstrap.servers", env.get("KAFKA_HOST") + ":" + env.get("KAFKA_PORT"), errstr);
     std::unique_ptr<RdKafka::Producer> producer(RdKafka::Producer::create(conf.get(), errstr));
     if (!producer) {
         std::cerr << "Failed to create Kafka producer: " << errstr << std::endl;

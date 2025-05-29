@@ -4,6 +4,7 @@ project(ChatGateway)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+
 # --------------------
 # Dependencies
 # --------------------
@@ -43,6 +44,35 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(jwt-cpp)
 
+
+
+FetchContent_Declare(
+        cpp_dotenv
+        GIT_REPOSITORY https://github.com/adeharo9/cpp-dotenv.git
+        GIT_TAG master # или укажите конкретный тег/версию
+)
+FetchContent_MakeAvailable(cpp_dotenv)
+
+# Найти все файлы *.env в исходной папке
+file(GLOB ENV_FILES "${CMAKE_SOURCE_DIR}/*.env")
+
+# Для каждого файла *.env создать команду копирования
+set(COPY_COMMANDS)
+foreach(env_file IN LISTS ENV_FILES)
+    get_filename_component(env_filename "${env_file}" NAME)
+    list(APPEND COPY_COMMANDS
+            COMMAND ${CMAKE_COMMAND} -E copy
+            "${env_file}"
+            "${CMAKE_BINARY_DIR}/${env_filename}"
+    )
+endforeach()
+
+add_custom_target(copy_env ALL
+        ${COPY_COMMANDS}
+        COMMENT "Copying all .env files"
+)
+
+
 # --------------------
 # Executable
 # --------------------
@@ -53,7 +83,11 @@ add_executable(ChatGateway
         controllers/ChatController.cpp
         jwt/config/JwtConfigure.cpp
         dto/jwt/JwtToken.h
+        util/SimpleEnv.cpp
+        util/SimpleEnv.h
 )
+
+add_dependencies(ChatGateway copy_env)
 
 # --------------------
 # Link libraries
@@ -79,3 +113,4 @@ target_include_directories(ChatGateway PRIVATE
         /usr/local/include  # For uWebSockets
         ${RDKAFKA_INCLUDE_DIR}  # For librdkafka
 )
+
