@@ -5,6 +5,7 @@
 #include <set>
 #include <memory>
 
+#include "controllers/ChatController.h"
 #include "dto/ActiveUser.h"
 #include "util/SimpleEnv.h"
 
@@ -15,54 +16,36 @@ int main(int argc, char* argv[]) {
 
     // Set up Kafka producer
     std::string errstr;
-    std::cout << env.get("KAFKA_HOST") + ":" + env.get("KAFKA_PORT") << std::endl;
+    auto host = env.get("KAFKA_HOST") + ":" + env.get("KAFKA_PORT");
+    std::cout << "Хост порт: " << host << std::endl;
     std::unique_ptr<RdKafka::Conf> conf(RdKafka::Conf::create(RdKafka::Conf::CONF_GLOBAL));
-    conf->set("bootstrap.servers", env.get("KAFKA_HOST") + ":" + env.get("KAFKA_PORT"), errstr);
-    std::unique_ptr<RdKafka::Producer> producer(RdKafka::Producer::create(conf.get(), errstr));
+    conf->set("bootstrap.servers", host, errstr);
+    std::shared_ptr<RdKafka::Producer> producer(RdKafka::Producer::create(conf.get(), errstr));
     if (!producer) {
         std::cerr << "Failed to create Kafka producer: " << errstr << std::endl;
         return 1;
     }
 
     // Create Kafka topic
-    std::unique_ptr<RdKafka::Topic> topic(RdKafka::Topic::create(producer.get(), "chat", nullptr, errstr));
+    std::shared_ptr<RdKafka::Topic> topic(RdKafka::Topic::create(producer.get(), "chat", nullptr, errstr));
     if (!topic) {
         std::cerr << "Failed to create topic: " << errstr << std::endl;
         return 1;
     }
 
+    // ----------------
+    //  Utils
+    // ----------------
+    JwtConfigure jwtConfig;
+
     // Set up uWebSockets server
     uWS::App app;
 
-    app.ws<ActiveUser>("/*", {
-        .open = [](uWS::WebSocket<false, true, ActiveUser> *ws) {
-            const auto* activeUser = ws->getUserData();
-            ws->subscribe(activeUser->topic);
-        },
-        .message = [&producer, &topic](auto *ws, std::string_view message, uWS::OpCode opCode) {
-            std::string msg(message);
+    // ----------------
+    //  Controllers
+    // ----------------
+    ChatController chatController(app, jwtConfig, producer, topic);
 
-            // Send message to Kafka
-            RdKafka::ErrorCode err = producer->produce(
-                topic.get(),
-                RdKafka::Topic::PARTITION_UA,
-                RdKafka::Producer::RK_MSG_COPY,
-                const_cast<char *>(msg.c_str()), msg.length(),
-                nullptr, 0,
-                nullptr
-            );
-
-            if (err != RdKafka::ERR_NO_ERROR) {
-                std::cerr << "Failed to produce to Kafka: " << RdKafka::err2str(err) << std::endl;
-            } else {
-                std::cout << "Message sent to Kafka: " << msg << std::endl;
-            }
-
-            // Broadcast to all clients
-
-            producer->poll(0);
-        },
-    });
 
     app.listen(3000, [](auto *listen_socket) {
         if (listen_socket) {

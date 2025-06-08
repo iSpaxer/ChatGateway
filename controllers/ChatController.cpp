@@ -6,7 +6,14 @@
 #include "ChatController.h"
 #include <jwt-cpp/jwt.h>
 
-ChatController::ChatController(uWS::App &_uWS, JwtConfigure& _jwtConfigure): uWS(_uWS), jwtConfigure(_jwtConfigure) {
+#include <utility>
+
+ChatController::ChatController(uWS::App &_uWS, JwtConfigure& _jwtConfigure,
+    std::shared_ptr<RdKafka::Producer> _producer, std::shared_ptr<RdKafka::Topic> _topic):
+        uWS(_uWS),
+        jwtConfigure(_jwtConfigure),
+        producer(std::move(_producer)),
+        topic(std::move(_topic)) {
     // -------------
     // Create chat
     // -------------
@@ -103,16 +110,41 @@ ChatController::ChatController(uWS::App &_uWS, JwtConfigure& _jwtConfigure): uWS
             onlineByTopic[activeUser->topic]++;
         },
         .message = [this](auto *ws, std::string_view message, uWS::OpCode opCode) {
+            std::string msg(message);
+
             ActiveUser *activeUser = ws->getUserData();
             std::string broadcastMessage = std::string(activeUser->jwtToken.username) + ": " + std::string(message);
             ws->publish(activeUser->topic, broadcastMessage, opCode);
+
+            // ----
+            // Send message to Kafka
+            RdKafka::ErrorCode err = producer->produce(
+                topic.get(),
+                RdKafka::Topic::PARTITION_UA,
+                RdKafka::Producer::RK_MSG_COPY,
+                const_cast<char *>(msg.c_str()), msg.length(),
+                nullptr, 0,
+                nullptr
+            );
+
+            if (err != RdKafka::ERR_NO_ERROR) {
+                std::cerr << "Failed to produce to Kafka: " << RdKafka::err2str(err) << std::endl;
+            } else {
+                std::cout << "Message sent to Kafka: " << msg << std::endl;
+            }
+
+            // Broadcast to all clients
+
+            producer->poll(0);
+
+            // ----
         },
         .close = [this](uWS::WebSocket<false, true, ActiveUser> *ws, int code, std::string_view message) {
-                    ActiveUser *activeUser = ws->getUserData();
-                    // Оповещаем топик об уходе
-                    ws->publish(activeUser->topic, activeUser->jwtToken.username + " left the topic.", uWS::OpCode::TEXT);
+            ActiveUser *activeUser = ws->getUserData();
+            // Оповещаем топик об уходе
+            ws->publish(activeUser->topic, activeUser->jwtToken.username + " left the topic.", uWS::OpCode::TEXT);
 
-                    onlineByTopic[activeUser->topic]--;
-                }
+            onlineByTopic[activeUser->topic]--;
+        }
     });
 }
